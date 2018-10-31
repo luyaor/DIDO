@@ -10,6 +10,7 @@ from flask_pymongo import PyMongo
 from flask_github import GitHub
 
 from util import wordext
+from util import localfile
 import nlp_model
 
 app = Flask(__name__)
@@ -19,6 +20,7 @@ app.config["SECRET_KEY"] = "build_it_better"
 app.config['GITHUB_CLIENT_ID'] = os.environ.get('DIDO_GITHUB_CLIENT_ID')
 app.config['GITHUB_CLIENT_SECRET'] = os.environ.get('DIDO_GITHUB_CLIENT_SECRET')
 
+raw_issue_info_save_path = '/DATA/luyao/model/raw_issues'
 
 github = GitHub(app)
 
@@ -27,7 +29,7 @@ login_manager.login_view = "login"
 
 mongo = PyMongo(app)
 
-debug_flag = True
+debug_flag = False
 
 # -------------------------------------------------------------------------------------
 # User model, Login & Logout
@@ -107,26 +109,37 @@ def get_raw_issues(repo, option='all'):
             _id = repo + '/' + num
             data = {'repo': repo, 'num': num, 'num1_data': issue}
             mongo.db.issue.update({'_id': _id}, {'$set': data}, upsert=True)
-
-    if option == 'only_open':
-        open_issues = github.request('GET', 'repos/%s/%ss?state=open' % (repo, 'issue'), True)
-        mongo.db.issue_list.update({'_id': repo}, {'$set': {'open_issues': open_issues,}}, upsert=True)
-        update_issue(open_issues)
-        return open_issues
-
+    
+    local_open_issue_list = raw_issue_info_save_path + repo.replace('/','_') + '_open.json'
+    local_closed_issue_list = raw_issue_info_save_path + repo.replace('/','_') + '_closed.json'
+    
     r = mongo.db.issue_list.find_one({'_id': repo})
     
-    if (r is None) or ('updated_time' not in r) or ((datetime.utcnow() - r['updated_time']).days >= 7) or ('refresh' in option):
+    if option == 'only_open':
+        if (r is not None) and ('only_open_updated_time' in r) and ((datetime.utcnow() - r['only_open_updated_time']).seconds <= 60 * 5):
+            ret = localfile.get_file_or_none(local_open_issue_list)
+            if ret is not None:
+                return ret
         open_issues = github.request('GET', 'repos/%s/%ss?state=open' % (repo, 'issue'), True)
-        mongo.db.issue_list.update({'_id': repo}, {'$set': {'open_issues': open_issues,}}, upsert=True)
+        localfile.write_to_file(local_open_issue_list, open_issues)
+        update_issue(open_issues)
+        mongo.db.issue_list.update({'_id': repo}, {'$set': {'only_open_updated_time': datetime.utcnow(),}}, upsert=True)
+        return open_issues
+    
+    cur_open = localfile.get_file_or_none(local_open_issue_list)
+    cur_closed = localfile.get_file_or_none(local_closed_issue_list)
+    
+    if (cur_open is None) or (cur_closed is None) or (r is None) or ('updated_time' not in r) or ((datetime.utcnow() - r['updated_time']).days >= 7) or ('refresh' in option):
+        open_issues = github.request('GET', 'repos/%s/%ss?state=open' % (repo, 'issue'), True)
+        localfile.write_to_file(local_open_issue_list, open_issues)
         update_issue(open_issues)
         closed_issues = github.request('GET', 'repos/%s/%ss?state=closed' % (repo, 'issue'), True)
-        mongo.db.issue_list.update({'_id': repo}, {'$set': {'closed_issues': closed_issues,}}, upsert=True)
+        localfile.write_to_file(local_closed_issue_list, closed_issues)
         update_issue(closed_issues)
-        mongo.db.issue_list.update({'_id': repo}, {'$set': {'updated_time': datetime.utcnow(),}}, upsert=True)
-        r = mongo.db.issue_list.find_one({'_id': repo})
-
-    return r['open_issues'] + r['closed_issues']
+        mongo.db.issue_list.update({'_id': repo}, {'$set': {'updated_time': datetime.utcnow(), 'only_open_updated_time': datetime.utcnow()}}, upsert=True)
+        return open_issues + closed_issues
+    
+    return cur_open + cur_closed
 
 
 def detect_dup_issue(repo, num):

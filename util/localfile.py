@@ -26,6 +26,12 @@ def get_file(path):
     else:
         raise Exception('no such file %s' % path)
 
+def get_file_or_none(path):
+    try:
+        return get_file(path)
+    except:
+        return None
+
 def try_get_file(path):
     if os.path.exists(path):
         try:
