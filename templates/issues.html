@@ -34,7 +34,7 @@
             var obj = $(this);
             if (obj.hasClass('btn-success')) {
                 obj.removeClass('btn-success').addClass('btn-warning');
-                $.getJSON($SCRIPT_ROOT + '/detect_openpr', {
+                $.getJSON($SCRIPT_ROOT + '/refresh_one_issue', {
                     repo: $('table').attr('id'),
                     num: obj.parent().siblings('.num').text(),
                 }, function(data) {
@@ -75,15 +75,19 @@ $(document).ready( function () {
 
 
 <div>
-<h2>
-    <b> Duplicate Detection </b> of Open Pull Requests of <i> {{ repo }} </i> DashBoard 
+    
+<h1>
+    DIDO <sub><b>D</b>uplicate <b>I</b>ssues <b>D</b>etect<b>O</b>r </sub> &nbsp; DashBoard
+
     <button type="button" class="btn btn-primary btn-sm">
-            <a href="{{ url_for('openpr') }}" style="color:inherit">Homepage</a>
+            <a href="{{ url_for('index') }}" style="color:inherit">Homepage</a>
         </button>
     <button type="button" class="btn btn-primary btn-sm" id="refresh_all">
         Refresh All
     </button>
-</h2>
+
+</h1>
+
 </div>
 
 <table id="{{ repo }}" class="display">
@@ -92,48 +96,43 @@ $(document).ready( function () {
             <th> </th>
             <th> Number </th>
             <th> Title </th>
-            <th> Create time </th>
             <th> Dup's Number </th>
             <th> Dup's Title </th>
-            <th> Level </th>
-            <th> Proba </th>
+            <th> Similarity </th>
             <th> </th>
         </tr>
     </thead>
     <tbody>
-        {% for pull in pr_list %}
+        {% for issue in issue_list %}
         <tr>
+            {% set issueA = issue.get('num1_data', None) %}
+            {% set issueB = issue.get('num2_data', None) %}
+            
             <td> </td>
             
-            <td class="num"> {{ pull.get('num', '') }} </td>
+            <td class="num"> {{ issueA.get('number', '') }} </td>
 
             <td>
-                {% if 'state' in pull %}
-                {{ '[%s]' % pull.get('state').upper() }}
-                {% endif %}
-                <a tag="title" href="{{ pull.get('link', '') }}" target="_blank">{{ pull.get('title', '') }} </a>
+                {{ '[%s]' % issueA.get('state').upper() }}
+                <a tag="title" href="{{ issueA.get('html_url', '') }}" target="_blank">{{ issueA.get('title', '') }} </a>
             </td>
-            <td nowrap>
-                {% if 'created_at' in pull %}
-                {{ pull['created_at'].strftime("%Y-%m-%d") }}
+            
+            <td class="num2">
+                {% if issueB %}
+                    {{ issueB.get('number', '') }}
                 {% endif %}
             </td>
-            <td class="num2"> {{ pull.get('num2', '') }} </td>
 
             <td>
-                {% if 'state2' in pull %}
-                {{ '[%s]' % pull.get('state2').upper() }}
+                {% if issueB %}
+                    {{ '[%s]' % issueB.get('state').upper() }}
+                    <a tag="title2" href="{{ issueB.get('html_url', '') }}" target="_blank"> {{ issueB.get('title', '') }} </a>
                 {% endif %}
-                <a tag="title2" href="{{ pull.get('link2', '') }}" target="_blank"> {{ pull.get('title2', '') }} </a>
-            </td>
-
-            <td class="level">
-                {{ "Probably" if pull.get('proba', -1) >= 0.6 else ("Maybe" if pull.get('proba', -1) >= 0.58 else '') }}
             </td>
 
             <td class="proba">
-                {% if 'proba' in pull %}
-                {{ '%04f' % pull.get('proba') }}
+                {% if 'proba' in issue %}
+                    {{ '%.2lf' % issue['proba'] }}
                 {% endif %}
             </td>
     

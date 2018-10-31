@@ -16,14 +16,14 @@ app = Flask(__name__)
 
 app.config["MONGO_URI"] = "mongodb://localhost:27017/dido_db?connect=false"
 app.config["SECRET_KEY"] = "build_it_better"
-
-app.config['GITHUB_CLIENT_ID'] = 'b32ca6bbebe2a91ed71d'
-app.config['GITHUB_CLIENT_SECRET'] = 'fc501d59ec54c31797e53bf583cca4e42f80c9cc'
+app.config['GITHUB_CLIENT_ID'] = os.environ.get('DIDO_GITHUB_CLIENT_ID')
+app.config['GITHUB_CLIENT_SECRET'] = os.environ.get('DIDO_GITHUB_CLIENT_SECRET')
 
 
 github = GitHub(app)
 
 login_manager = LoginManager(app)
+login_manager.login_view = "login"
 
 mongo = PyMongo(app)
 
@@ -100,16 +100,16 @@ def authorized(oauth_token):
 model = None
 
 
-def get_raw_issues(repo, option='all'):
-
+def get_raw_issues(repo, option='all'):    
     def update_issue(raw_issues):
         for issue in raw_issues:
-            _id = repo + issue['number']
-            data = {'repo': repo, 'num': issue['number'], 'num1_data': issue}
+            num = str(issue['number'])
+            _id = repo + '/' + num
+            data = {'repo': repo, 'num': num, 'num1_data': issue}
             mongo.db.issue.update({'_id': _id}, {'$set': data}, upsert=True)
 
     if option == 'only_open':
-        open_issues = api.request('GET', 'repos/%s/%ss?state=open' % (repo, 'issue'), True)
+        open_issues = github.request('GET', 'repos/%s/%ss?state=open' % (repo, 'issue'), True)
         mongo.db.issue_list.update({'_id': repo}, {'$set': {'open_issues': open_issues,}}, upsert=True)
         update_issue(open_issues)
         return open_issues
@@ -117,10 +117,10 @@ def get_raw_issues(repo, option='all'):
     r = mongo.db.issue_list.find_one({'_id': repo})
     
     if (r is None) or ('updated_time' not in r) or ((datetime.utcnow() - r['updated_time']).days >= 7) or ('refresh' in option):
-        open_issues = api.request('GET', 'repos/%s/%ss?state=open' % (repo, 'issue'), True)
+        open_issues = github.request('GET', 'repos/%s/%ss?state=open' % (repo, 'issue'), True)
         mongo.db.issue_list.update({'_id': repo}, {'$set': {'open_issues': open_issues,}}, upsert=True)
         update_issue(open_issues)
-        closed_issues = api.request('GET', 'repos/%s/%ss?state=closed' % (repo, 'issue'), True)
+        closed_issues = github.request('GET', 'repos/%s/%ss?state=closed' % (repo, 'issue'), True)
         mongo.db.issue_list.update({'_id': repo}, {'$set': {'closed_issues': closed_issues,}}, upsert=True)
         update_issue(closed_issues)
         mongo.db.issue_list.update({'_id': repo}, {'$set': {'updated_time': datetime.utcnow(),}}, upsert=True)
@@ -131,12 +131,12 @@ def get_raw_issues(repo, option='all'):
 
 def detect_dup_issue(repo, num):
     cur_issue = mongo.db.issue.find_one({'repo': repo, 'num': num})
-
+    
     issue_list = get_raw_issues(repo)
-    issue_dict = dict([(issue['number'], issue) for issue in issue_list])
+    issue_dict = dict([(str(issue['number']), issue) for issue in issue_list])
     
     global model
-    model_save_id = repo + '_issue'
+    model_save_id = repo.replace('/', '_') + '_issue'
     if (model is None) or (model.save_id != model_save_id):
         title_list = [str(issue['title']) for issue in issue_list]
         body_list = [str(issue['body']) for issue in issue_list]
@@ -144,14 +144,20 @@ def detect_dup_issue(repo, num):
 
     det_ret = {}
     issueA = issue_dict[num]
+    def get_text_sim(doc1, doc2):
+        return model.query_sim_tfidf(wordext.get_words_from_text(doc1), wordext.get_words_from_text(doc2))
+    
     for issueB in issue_list:
-        det_ret[issueB['number']] = (model.query_sim_tfidf(issueA['title'], issueB['title']) + model.query_sim_tfidf(issueA['body'], issueB['body'])) / 2
+        num2 = str(issueB['number'])
+        if num == num2:
+            continue
+        det_ret[num2] = (get_text_sim(issueA['title'], issueB['title']) + get_text_sim(issueA['body'], issueB['body'])) / 2
 
     sorted_ret = [(x,y) for x, y in sorted(det_ret.items(), key=lambda x: x[1], reverse=True)]
     num2, sim = sorted_ret[0]
 
     data = {'num2': num2, 'proba': sim, 'num2_data': issue_dict[num2]}
-    mongo.db.issue_det.update({'_id': cur_issue['_id']}, {'$set': data}, upsert=True)
+    mongo.db.issue.update({'_id': cur_issue['_id']}, {'$set': data}, upsert=True)
 
 
 @app.route('/refresh_one_issue', methods=['GET', 'POST'])
@@ -162,7 +168,7 @@ def refresh_one_issue():
         raise Exception('Params Error!')
 
     detect_dup_issue(repo, num)
-    return True
+    return jsonify(True)
 
 
 @app.route('/refresh_all', methods=['GET', 'POST'])
@@ -173,17 +179,20 @@ def refresh_all():
 
     open_issue_list = get_raw_issues(repo, 'only_open')
     for issue in open_issue_list:
-        detect_dup_issue(repo, issue['number'])
-    return True
+        detect_dup_issue(repo, str(issue['number']))
+    return jsonify(True)
 
 
-@app.route('/<path:repo>', methods=['GET', 'POST'])
+@app.route('/db/<path:repo>', methods=['GET', 'POST'])
+@login_required
 def dashboard(repo):
-    open_issue_list = get_raw_issues(repo, 'only_open')
-    return render_template('issues.html', repo=repo, issue_list=open_issue_list)
+    get_raw_issues(repo, 'only_open')
+    issues = mongo.db.issue.find({'repo': repo})
+    open_issues = list(filter(lambda x: x['num1_data']['state'] == 'open', issues))
+    return render_template('issues.html', repo=repo, issue_list=open_issues)
 
 
-@app.route('/index')
+@app.route('/')
 def index():
     return render_template('index.html')
 
