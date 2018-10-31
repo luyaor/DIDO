@@ -164,9 +164,11 @@ def detect_dup_issue(repo, num):
 def refresh_one_issue():
     repo = request.args.get('repo').strip()
     num = request.args.get('num').strip()
+    # print('refresh', repo, num)
+    
     if not (repo and num):
         raise Exception('Params Error!')
-
+    
     detect_dup_issue(repo, num)
     return jsonify(True)
 
