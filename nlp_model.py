@@ -14,8 +14,7 @@ class Model:
                 return
             except:
                 print('start init nlp model!')
-                pass
-        
+
         if (texts is None) or (texts == []):
             raise Exception('error on init nlp Model')
         

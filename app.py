@@ -1,4 +1,3 @@
-import sys
 import os
 from datetime import datetime
 
@@ -84,7 +83,7 @@ def authorized(oauth_token):
     if oauth_token is None:
         flash("Authorization failed.")
         return redirect(next_url)
-    
+
     g.github_access_token = oauth_token
     github_user_info = github.get('user')
     github_username = github_user_info["login"]

@@ -21,7 +21,7 @@ def word_split_by_char(s):
             Word
         Returns:
             List of the split words
-    """    
+    """
     old_words = []
     old_words.append(s)
     result = []
@@ -91,7 +91,7 @@ def get_words_from_file(file, text):
 
     tokens = list(itertools.chain(*[word_split_by_char(token) for token in tokens]))
     # tokens.extend(list(itertools.chain(*[word_split_by_char(token) for token in origin_tokens]))) # Keep original tokens
-    
+
     tokens = list(filter(lambda x: re.search("[0-9A-Za-z_]", x), tokens))
     
     tokens = [x.lower() for x in tokens]
