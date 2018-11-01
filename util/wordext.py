@@ -1,4 +1,3 @@
-import os
 import re
 import nltk
 import itertools
@@ -22,9 +21,7 @@ def word_split_by_char(s):
             Word
         Returns:
             List of the split words
-    """
-    # return [s]
-    
+    """    
     old_words = []
     old_words.append(s)
     result = []
@@ -68,6 +65,7 @@ def lemmatize_process(tokens):
     for try_times in range(3): # NLTK is not thread-safe, use simple retry to fix it.
         try:
             result = [lemmatizer.lemmatize(word) for word in tokens]
+            return result
         except:
             print('error on lemmatize_process')
             time.sleep(5)

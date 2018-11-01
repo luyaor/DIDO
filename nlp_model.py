@@ -1,11 +1,11 @@
-from gensim import corpora, models, similarities, matutils
+from gensim import corpora, models, matutils
 
 model_path = '/DATA/luyao/model/'
 
 class Model:
     def __init__(self, texts, save_id = None):
         self.save_id = save_id
-        
+
         if save_id is not None:
             try:
                 self.dictionary = corpora.Dictionary.load(model_path + '%s.dictionary' % save_id)
@@ -13,6 +13,7 @@ class Model:
                 print('model already exists!')
                 return
             except:
+                print('start init nlp model!')
                 pass
         
         if (texts is None) or (texts == []):

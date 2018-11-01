@@ -22,18 +22,14 @@ def init():
             if line:
                 word = line.strip()
                 general_stopwords.append(word)
-    
+
     FLAGS_load_language_data = True
+
 
 def get_general_stopwords():
     init()
     return general_stopwords
 
-'''
-def get_common_words_in_pr():
-    init()
-    return common_words_in_pr
-'''
 
 def is_text(file):
     """ The file is text

@@ -4,7 +4,7 @@ from datetime import datetime
 
 from functools import wraps
 
-from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, g, abort, current_app
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, g, abort
 from flask_login import LoginManager, UserMixin, AnonymousUserMixin, logout_user, login_user, login_required, current_user
 from flask_pymongo import PyMongo
 from flask_github import GitHub
@@ -41,7 +41,7 @@ class User(UserMixin):
 
     def is_admin(self):
         return self.id == 'FancyCoder0'
-    
+
 class AnonymousUser(AnonymousUserMixin):
     def is_admin(self):
         return False
@@ -85,7 +85,7 @@ def authorized(oauth_token):
         flash("Authorization failed.")
         return redirect(next_url)
     
-    g.github_access_token = oauth_token    
+    g.github_access_token = oauth_token
     github_user_info = github.get('user')
     github_username = github_user_info["login"]
         
@@ -102,7 +102,7 @@ def authorized(oauth_token):
 model = None
 
 
-def get_raw_issues(repo, option='all'):    
+def get_raw_issues(repo, option='all'):
     def update_issue(raw_issues):
         for issue in raw_issues:
             num = str(issue['number'])

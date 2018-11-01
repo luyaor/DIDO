@@ -39,4 +39,3 @@ def try_get_file(path):
         except:
             return None
     return None
-    
