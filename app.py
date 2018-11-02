@@ -171,6 +171,8 @@ def compare_with_issues(repo, num1, issueA=None):
 
     
 def detect_dup_issue(repo, num):
+    print('detect_dup_issue', repo, num)
+    
     cur_issue = mongo.db.issue.find_one({'repo': repo, 'num': num})
     num2, sim, num2_data2 = compare_with_issues(repo, num)[0]
     data = {'num2': num2, 'proba': sim, 'num2_data': num2_data2}
@@ -192,9 +194,7 @@ def detect_input_issue():
 @app.route('/refresh_one_issue', methods=['GET', 'POST'])
 def refresh_one_issue():
     repo = request.args.get('repo').strip()
-    num = request.args.get('num').strip()
-    # print('refresh', repo, num)
-    
+    num = request.args.get('num').strip()    
     if not (repo and num):
         raise Exception('Params Error!')
     
