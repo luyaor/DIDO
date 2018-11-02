@@ -194,7 +194,7 @@ def detect_input_issue():
 @app.route('/refresh_one_issue', methods=['GET', 'POST'])
 def refresh_one_issue():
     repo = request.args.get('repo').strip()
-    num = request.args.get('num').strip()    
+    num = request.args.get('num').strip()
     if not (repo and num):
         raise Exception('Params Error!')
     

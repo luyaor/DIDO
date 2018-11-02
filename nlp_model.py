@@ -17,7 +17,7 @@ class Model:
 
         if (texts is None) or (texts == []):
             raise Exception('error on init nlp Model')
-        
+
         self.dictionary = corpora.Dictionary(texts)
         
         corpus = [self.dictionary.doc2bow(text) for text in texts]

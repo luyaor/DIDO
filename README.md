@@ -12,5 +12,3 @@ Motivation:
 ScreenShot:
 ![ScreenShot1](./templates/ScreenShot1.png)
 ![ScreenShot2](./templates/ScreenShot2.png)
-
-

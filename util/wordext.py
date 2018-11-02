@@ -80,7 +80,7 @@ def get_words_from_file(file, text):
             file: file full name
             text: the raw text of the file
         Returns:
-            A list of the tokens of the result of the participle. 
+            A list of the tokens of the result of the participle.
     """
     if not language_tool.is_text(file):
         return []
@@ -93,7 +93,7 @@ def get_words_from_file(file, text):
     # tokens.extend(list(itertools.chain(*[word_split_by_char(token) for token in origin_tokens]))) # Keep original tokens
 
     tokens = list(filter(lambda x: re.search("[0-9A-Za-z_]", x), tokens))
-    
+
     tokens = [x.lower() for x in tokens]
     
     # tokens = filter(lambda x: x not in language_tool.get_language_stop_words(language_tool.get_language(file)), tokens)
