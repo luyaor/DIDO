@@ -1,5 +1,9 @@
 <!doctype html>
 <script type="text/javascript"> var $SCRIPT_ROOT = {{ request.script_root|tojson|safe }}; </script>
+
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.19/css/jquery.dataTables.min.css">
+<link rel="stylesheet" type="text/css" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css">
+
 <script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
 <script type="text/javascript" src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.min.js"></script>
 <script type="text/javascript" src="https://cdn.datatables.net/plug-ins/1.10.19/pagination/input.js"></script>
@@ -9,9 +13,7 @@
 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
 <script type="text/javascript" src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.html5.min.js"></script>
 
-
-<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.19/css/jquery.dataTables.min.css">
-<link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+<script type="text/javascript" src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js"></script>
 
 
 <script type="text/javascript">
@@ -21,7 +23,7 @@
             if (obj.hasClass('btn-primary')) {
                 obj.removeClass('btn-primary').addClass('btn-secondary');
                 $.getJSON($SCRIPT_ROOT + '/refresh_all', {
-                    repo: $('table').attr('id'),
+                    repo: $('table.main').attr('id'),
                 }, function(data) {
                     obj.removeClass('btn-secondary').addClass('btn-primary');
                     location.reload();
@@ -29,13 +31,14 @@
             }
         };
         $('#refresh_all').click(refresh_all);
-
+        
+        
         var refresh = function(e) {
             var obj = $(this);
             if (obj.hasClass('btn-success')) {
                 obj.removeClass('btn-success').addClass('btn-warning');
                 $.getJSON($SCRIPT_ROOT + '/refresh_one_issue', {
-                    repo: $('table').attr('id'),
+                    repo: $('table.main').attr('id'),
                     num: obj.parent().siblings('.num').text(),
                 }, function(data) {
                     obj.removeClass('btn-warning').addClass('btn-success');
@@ -50,7 +53,7 @@
 
 <script>
 $(document).ready( function () {
-    var t = $('table').DataTable({
+    var t = $('table.main').DataTable({
         "columnDefs": [ { "searchable": false, "orderable": false, "targets": 0 },
                       ],
         dom: 'Blfrtip',
@@ -75,22 +78,100 @@ $(document).ready( function () {
 
 
 <div>
-    
-<h1>
-    DIDO <sub><b>D</b>uplicate <b>I</b>ssues <b>D</b>etect<b>O</b>r </sub> &nbsp; DashBoard
+    <h1>
+        <a href="{{ url_for('index') }}" style="color:inherit">DIDO  <sub><b>D</b>uplicate <b>I</b>ssues <b>D</b>etect<b>O</b>r </sub></a>
+        &nbsp;
+        DashBoard
+    </h1>
+</div>
 
-    <button type="button" class="btn btn-primary btn-sm">
-            <a href="{{ url_for('index') }}" style="color:inherit">Homepage</a>
-        </button>
+<hr>
+
+<div>
+    <center>
+    <h3> {{ repo }} </h3>
+    </center>
+    
+    <p align="right">
+        
     <button type="button" class="btn btn-primary btn-sm" id="refresh_all">
         Refresh All
     </button>
-
-</h1>
-
+    &nbsp;
+    <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#issueModal">
+        New Issue Detection
+    </button>
+        
+    </p>
 </div>
 
-<table id="{{ repo }}" class="display">
+<div class="modal fade" id="issueModal" tabindex="-1" role="dialog" aria-labelledby="issueModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLabel">New Issue Detection</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form>
+          <div class="form-group">
+            <label for="issue_title" class="col-form-label">Title:</label>
+            <input type="text" class="form-control" id="issue_title_text">
+          </div>
+          <div class="form-group">
+            <label for="issue_body" class="col-form-label">Body:</label>
+            <textarea class="form-control" id="issue_body_text"></textarea>
+          </div>
+        </form>
+        <table class="table">
+            Results:
+            <thead>
+                <tr>
+                    <th scope="col">#</th><th scope="col">Dup's Number</th>
+                    <th scope="col">Dup's Title</th>
+                    <th scope="col">Similarity</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="submit_new_issue">Submit</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+    $(function() {
+        var submit_new_issue = function(e) {
+            var modal = $(this).parents('#issueModal');
+            $.getJSON($SCRIPT_ROOT + '/detect_input_issue', {
+                repo: $('table.main').attr('id'),
+                title: modal.find('#issue_title_text').val(),
+                body: modal.find('#issue_body_text').val(),
+            }, function(data) {
+                tbody = modal.find('tbody');
+                tbody.empty();
+                cnt = 0;
+                $.each(data, function(k, v) {
+                    cnt = cnt + 1;
+                    title = '[' + v.data['state'].toUpperCase() + ']' + '<a tag="title" href="' + v.data['html_url'] + '" target="_blank">' + v.data['title'] + '</a>'
+                    tbody.append('<tr><th scope="row">' + cnt + '</th><td>' + v.num + '</td><td>' + title + '</td><td>' + v.sim.toFixed(2) +'</td></tr>');
+                });
+                
+            });
+        };
+        $('#submit_new_issue').click(submit_new_issue);
+    });
+</script>
+
+
+<table id="{{ repo }}" class="display main">
     <thead>
         <tr>
             <th> </th>

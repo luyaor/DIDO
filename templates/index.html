@@ -1,9 +1,7 @@
 <!doctype html>
 <script type="text/javascript"> var $SCRIPT_ROOT = {{ request.script_root|tojson|safe }}; </script>
 <script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
-<script type="text/javascript" src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.min.js"></script>
-<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.19/css/jquery.dataTables.min.css">
-<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+<link rel="stylesheet" type="text/css" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css">
 
 
 
@@ -12,7 +10,7 @@
         var jump = function(e) {
             location.href = "/db/" + $('#owner').val() + '/' + $('#repo').val()
         };
-        $('button').click(jump);
+        $('#submit_button').click(jump);
     });
 </script>
 
@@ -36,7 +34,7 @@
     <input id="repo" type="text" class="form-control" placeholder="" aria-label="" aria-describedby="basic-addon1">
 </div>
 
-<button type="submit" class="btn btn-primary btn-block">Try it!</button>
+<button id="submit_button" type="submit" class="btn btn-primary btn-block">Try it!</button>
 
 <!-- Footer -->
 <footer class="page-footer font-small blue">

@@ -141,9 +141,7 @@ def get_raw_issues(repo, option='all'):
     return cur_open + cur_closed
 
 
-def detect_dup_issue(repo, num):
-    cur_issue = mongo.db.issue.find_one({'repo': repo, 'num': num})
-    
+def compare_with_issues(repo, num1, issueA=None):
     issue_list = get_raw_issues(repo)
     issue_dict = dict([(str(issue['number']), issue) for issue in issue_list])
     
@@ -153,24 +151,43 @@ def detect_dup_issue(repo, num):
         title_list = [str(issue['title']) for issue in issue_list]
         body_list = [str(issue['body']) for issue in issue_list]
         model = nlp_model.Model([wordext.get_words_from_text(doc) for doc in (title_list + body_list)], model_save_id)
-
+    
+    if (num1 is not None) and (issueA is None):
+        issueA = issue_dict[num1]
+    
     det_ret = {}
-    issueA = issue_dict[num]
+    
     def get_text_sim(doc1, doc2):
         return model.query_sim_tfidf(wordext.get_words_from_text(doc1), wordext.get_words_from_text(doc2))
     
     for issueB in issue_list:
         num2 = str(issueB['number'])
-        if num == num2:
+        if num1 == num2:
             continue
         det_ret[num2] = (get_text_sim(issueA['title'], issueB['title']) + get_text_sim(issueA['body'], issueB['body'])) / 2
 
-    sorted_ret = [(x,y) for x, y in sorted(det_ret.items(), key=lambda x: x[1], reverse=True)]
-    num2, sim = sorted_ret[0]
+    sorted_ret = [(x, y, issue_dict[x]) for x, y in sorted(det_ret.items(), key=lambda x: x[1], reverse=True)[:10]]
+    return sorted_ret
 
-    data = {'num2': num2, 'proba': sim, 'num2_data': issue_dict[num2]}
+    
+def detect_dup_issue(repo, num):
+    cur_issue = mongo.db.issue.find_one({'repo': repo, 'num': num})
+    num2, sim, num2_data2 = compare_with_issues(repo, num)[0]
+    data = {'num2': num2, 'proba': sim, 'num2_data': num2_data2}
     mongo.db.issue.update({'_id': cur_issue['_id']}, {'$set': data}, upsert=True)
 
+
+@app.route('/detect_input_issue', methods=['GET', 'POST'])
+def detect_input_issue():
+    repo = request.args.get('repo').strip()
+    input_issue = {}
+    input_issue['title'] = request.args.get('title').strip()
+    input_issue['body'] = request.args.get('body').strip()
+    topk = 5
+    
+    ret = compare_with_issues(repo, None, input_issue)[:topk]
+    ret = [dict([('num', num), ('sim', sim), ('data', data)]) for (num, sim, data) in ret]
+    return jsonify(ret)
 
 @app.route('/refresh_one_issue', methods=['GET', 'POST'])
 def refresh_one_issue():
