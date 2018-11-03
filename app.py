@@ -14,6 +14,7 @@ import nlp_model
 
 app = Flask(__name__)
 
+app_website_url = "http://www.dido.rocks"
 app.config["MONGO_URI"] = "mongodb://localhost:27017/dido_db?connect=false"
 app.config["SECRET_KEY"] = "build_it_better"
 app.config['GITHUB_CLIENT_ID'] = os.environ.get('DIDO_GITHUB_CLIENT_ID')
@@ -68,7 +69,8 @@ def token_getter():
 
 @app.route('/login')
 def login():
-    return github.authorize()
+    next_url = request.args.get('next') or url_for('index')
+    return github.authorize(redirect_uri=app_website_url+url_for('authorized', next=next_url))
 
 @app.route('/logout')
 @login_required
@@ -221,6 +223,11 @@ def dashboard(repo):
     issues = mongo.db.issue.find({'repo': repo})
     open_issues = list(filter(lambda x: x['num1_data']['state'] == 'open', issues))
     return render_template('issues.html', repo=repo, issue_list=open_issues)
+
+
+@app.route('/about')
+def about():
+    return 'Hello! This website is made by <a href="http://luyaoren.com/" target="_blank">Luyao Ren</a>. It is <a href="https://github.com/FancyCoder0/DIDO" target="_blank">open source on GitHub</a>.'
 
 
 @app.route('/')
